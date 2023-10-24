@@ -1,0 +1,8 @@
+namespace FileInfo;
+
+table GoFileInfo {
+  filename: string;
+  num_imports: int;
+}
+
+root_type GoFileInfo;
