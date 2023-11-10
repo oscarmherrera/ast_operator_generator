@@ -19,9 +19,9 @@ var fileProcessor *ants.PoolWithFunc
 // SetupProcessing sets up the output directory and logger for processing.
 // @param outputDir string
 // @param logger *zap.Logger
-func SetupProcessing(outputDir string, logger *zap.Logger) {
+func SetupProcessing(outputDir string, l *zap.Logger) {
 	OUTPUT_DIR = outputDir
-	logger = logger
+	logger = l
 }
 
 type FileInfo struct {
@@ -63,8 +63,8 @@ func CreateProcessFilePool(poolsize int) (*ants.PoolWithFunc, error) {
 func (pf *FileProcessor) parseFile() error {
 	// Specify options for converting the file to JSON.
 	options := astjson.Options{
-		WithImports:    true,
-		WithComments:   true,
+		WithImports:    false,
+		WithComments:   false,
 		WithPositions:  true,
 		WithReferences: true,
 	}

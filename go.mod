@@ -7,6 +7,7 @@ require (
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/panjf2000/ants/v2 v2.8.2
 	github.com/sergi/go-diff v1.2.0
+	github.com/thedevsaddam/gojsonq v2.3.0+incompatible
 	go.uber.org/zap v1.26.0
 	golang.org/x/oauth2 v0.13.0
 )
