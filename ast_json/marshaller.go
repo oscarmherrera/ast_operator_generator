@@ -54,6 +54,7 @@ func (m *Marshaller) MarshalNode(nodeType string, _ ast.Node) Node {
 	return Node{
 		NodeType: nodeType,
 		RefId:    ref,
+		Id:       nodeTypesMap[nodeType],
 	}
 }
 

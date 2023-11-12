@@ -98,8 +98,8 @@ func main() {
 		&oauth2.Token{AccessToken: GITHUB_TOKEN},
 	)
 	tc := oauth2.NewClient(ctx, ts)
-	//client := github.NewClient(tc)
-	_ = github.NewClient(tc)
+	client := github.NewClient(tc)
+	//_ = github.NewClient(tc)
 
 	// Check and Create the output directory
 	createDir(OUTPUT_DIR)
@@ -137,7 +137,7 @@ func main() {
 	go func(wg1 *sync.WaitGroup) {
 		defer wg1.Done()
 		logger.Debug(fmt.Sprintf("Processing old repository %s with tag", *repo, REPO_OLD_TAG))
-		//processors.ProcessRepo(ctx, client, GITHUB_OWNER, *repo, "", REPO_OLD_TAG)
+		processors.ProcessRepo(ctx, client, GITHUB_OWNER, *repo, "", REPO_OLD_TAG)
 		processors.ReadFiles(OUTPUT_DIR + "/" + REPO_OLD_TAG)
 	}(&wg)
 
@@ -145,7 +145,7 @@ func main() {
 	go func(wg1 *sync.WaitGroup) {
 		defer wg1.Done()
 		logger.Debug(fmt.Sprintf("Processing new repository %s with tag", *repo, REPO_NEW_TAG))
-		//processors.ProcessRepo(ctx, client, GITHUB_OWNER, *repo, "", REPO_NEW_TAG)
+		processors.ProcessRepo(ctx, client, GITHUB_OWNER, *repo, "", REPO_NEW_TAG)
 		processors.ReadFiles(OUTPUT_DIR + "/" + REPO_NEW_TAG)
 	}(&wg)
 

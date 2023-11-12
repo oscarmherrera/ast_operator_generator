@@ -9,6 +9,7 @@ import (
 type Node struct {
 	NodeType string `json:"NodeType"`
 	RefId    int    `json:"RefId,omitempty"`
+	Id       int    `json:"Id,omitempty"`
 }
 
 type PositionNode struct {
