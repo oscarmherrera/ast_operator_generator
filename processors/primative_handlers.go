@@ -1,6 +1,9 @@
 package processors
 
-import "go.uber.org/zap"
+import (
+	"go.uber.org/zap"
+	"strings"
+)
 
 func FuncDeclHandler(declMap map[string]interface{}) {
 	var funcName string
@@ -24,37 +27,37 @@ func FuncDeclHandler(declMap map[string]interface{}) {
 				nameList := param["Names"].([]interface{})
 				if param["Type"] != nil {
 					typeMap := param["Type"].(map[string]interface{})
-					//typeName := typeMap["Name"].(string)
 					for _, name := range nameList {
 						paramNameList = append(paramNameList, name.(map[string]interface{})["Name"].(string))
-						//paramTypeList = append(paramTypeList, typeName)
 					}
 					switch typeMap["NodeType"].(string) {
 					case "Ident":
-						typeName := typeMap["Name"].(string)
-						for _, name := range nameList {
-							paramNameList = append(paramNameList, name.(map[string]interface{})["Name"].(string))
-							paramTypeList = append(paramTypeList, typeName)
-						}
-						logger.Debug("FuncDeclHandler->Ident", zap.Any("name", paramNameList), zap.String("type", typeName))
+						paramNameList, paramTypeList = IdentTypeHandler(typeMap, param)
+						logger.Debug("FuncDeclHandler->Ident")
 					case "SelectorExpr":
 						SelectorExprHandler(typeMap)
+						logger.Debug("FuncDeclHandler->SelectorExpr")
 					case "StarExpr":
 						StarExprHandler(typeMap, param)
+						logger.Debug("FuncDeclHandler->StarExpr")
 					case "ArrayType":
 						ArrayTypeHandler(typeMap, param)
+						logger.Debug("FuncDeclHandler->ArrayType")
 					case "MapType":
 						MapTypeHandler(typeMap, param)
+						logger.Debug("FuncDeclHandler->MapType")
 					case "FuncType":
 						logger.Debug("FuncDeclHandler->FuncType", zap.Any("name", param["Names"]))
 					case "InterfaceType":
 						logger.Debug("FuncDeclHandler->InterfaceType", zap.Any("name", param["Names"]))
 					case "Ellipsis":
-						logger.Debug("FuncDeclHandler->Ellipsis", zap.Any("name", param["Names"]))
+						EllipsisTypeHandler(typeMap, param)
+						logger.Debug("FuncDeclHandler->Ellipsis")
 					case "ChanType":
 						logger.Debug("FuncDeclHandler->ChanType", zap.Any("name", param["Names"]))
 					case "StructType":
-						logger.Debug("FuncDeclHandler->StructType", zap.Any("name", param["Names"]))
+						StructTypeHandler(typeMap)
+						logger.Debug("FuncDeclHandler->StructType")
 					default:
 						logger.Debug("FuncDeclHandler->Unknown", zap.Any("name", param["Names"]))
 					}
@@ -77,4 +80,66 @@ func FuncDeclHandler(declMap map[string]interface{}) {
 	}
 
 	logger.Debug("FuncDecl", zap.String("function name", funcName), zap.Any("params", paramNameList), zap.Any("types", paramTypeList))
+}
+
+func GenDeclHandler(declMap map[string]interface{}) {
+
+	logger.Debug("GenDecl", zap.Any("name", declMap["Tok"]))
+	spec := declMap["Specs"].([]interface{})
+	for _, s := range spec {
+		sMap := s.(map[string]interface{})
+		sType := sMap["NodeType"].(string)
+		switch sType {
+		case "ImportSpec":
+			if sMap["Name"] == nil {
+				path := sMap["Path"].(map[string]interface{})
+				value := strings.ReplaceAll(path["Value"].(string), "\"", "")
+				logger.Debug("ImportSpec", zap.Any("name", value))
+			}
+		case "TypeSpec":
+			for _, s := range spec {
+				sMap := s.(map[string]interface{})
+				sType := sMap["NodeType"].(string)
+				switch sType {
+				case "ImportSpec":
+					if sMap["Name"] == nil {
+						path := sMap["Path"].(map[string]interface{})
+						value := strings.ReplaceAll(path["Value"].(string), "\"", "")
+						logger.Debug("TypeSpec->ImportSpec", zap.Any("name", value))
+					}
+				case "TypeSpec":
+					if sMap["Name"] != nil {
+						name := sMap["Name"].(map[string]interface{})
+						typeMap := sMap["Type"].(map[string]interface{})
+						if typeMap["Name"] != nil {
+							logger.Debug("TypeSpec->TypeSpec", zap.String("type", typeMap["Name"].(string)), zap.Any("name", name["Name"]))
+						} else {
+							// we are dealing with a struct or an interface
+							switch typeMap["NodeType"].(string) {
+							case "StructType":
+								StructTypeHandler(typeMap)
+							case "InterfaceType":
+								logger.Debug("TypeSpec->TypeSpec", zap.String("type", "interface"), zap.Any("name", name["Name"]))
+							default:
+								logger.Debug("TypeSpec->TypeSpec Unknown", zap.Any("type", typeMap))
+							}
+						}
+					} else {
+						logger.Debug("Uknown TypeSpec", zap.Any("name", sMap))
+					}
+				case "ValueSpec":
+					ValueSpecItemHandler(sMap)
+
+				default:
+					logger.Debug("Unknown", zap.Any("name", sMap["Name"]))
+				}
+			}
+			logger.Debug("TypeSpec", zap.Any("name", sMap["Name"]))
+		case "ValueSpec":
+			ValueSpecHandler(spec)
+
+		default:
+			logger.Debug("Unknown", zap.Any("name", sMap["Name"]))
+		}
+	}
 }

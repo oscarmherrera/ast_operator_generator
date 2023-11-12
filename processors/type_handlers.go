@@ -52,11 +52,6 @@ func MapTypeHandler(fieldType map[string]interface{}, fieldMap map[string]interf
 }
 
 func SelectorExprHandler(fieldType map[string]interface{}) {
-	//xExp := fieldType["X"].(map[string]interface{})
-	//selExp := fieldType["Sel"].(map[string]interface{})
-	//
-	//xName := xExp["Name"].(string)
-	//selName := selExp["Name"].(string)
 	starExprType := fieldType["X"].(map[string]interface{})
 	switch starExprType["NodeType"].(string) {
 	case "Ident":
@@ -143,13 +138,16 @@ func ValueSpecItemHandler(sMap map[string]interface{}) {
 			typeMap = sMap["Type"].(map[string]interface{})
 			switch typeMap["NodeType"].(string) {
 			case "Ident":
-				for i, name := range names {
-					nameMap := name.(map[string]interface{})
-					if values != nil && len(values) > 0 {
-						valueMap := values[i].(map[string]interface{})
-						logger.Debug("ValueSpecItem->Ident", zap.Any("name", nameMap["Name"]), zap.Any("value", valueMap["Value"]), zap.Any("value type", valueMap["Kind"]), zap.Any("type", typeMap["Name"]))
-					}
-				}
+				paramNameList, paramTypeList := IdentTypeHandler(typeMap, sMap)
+				//for i, name := range names {
+				//	nameMap := name.(map[string]interface{})
+				//	if values != nil && len(values) > 0 {
+				//		valueMap := values[i].(map[string]interface{})
+				//		logger.Debug("ValueSpecItem->Ident", zap.Any("name", nameMap["Name"]), zap.Any("value", valueMap["Value"]), zap.Any("value type", valueMap["Kind"]), zap.Any("type", typeMap["Name"]))
+				//	}
+				//}
+				logger.Debug("ValueSpecItem->Ident", zap.Any("names", paramNameList), zap.Any("type", paramTypeList))
+
 			case "SelectorExpr":
 				SelectorExprHandler(typeMap)
 			case "StarExpr":
@@ -159,15 +157,17 @@ func ValueSpecItemHandler(sMap map[string]interface{}) {
 			case "MapType":
 				MapTypeHandler(typeMap, sMap)
 			case "FuncType":
-				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
+				logger.Debug("ValueSpecItem->FuncType", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
 			case "InterfaceType":
-				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
+				logger.Debug("ValueSpecItem->InterfaceType", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
 			case "Ellipsis":
-				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
+				EllipsisTypeHandler(typeMap, sMap)
+				logger.Debug("ValueSpecItem->Ellipsis", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
 			case "ChanType":
 				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
 			case "StructType":
-				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
+				StructTypeHandler(typeMap)
+				logger.Debug("ValueSpecItem->StructType")
 			default:
 				logger.Debug("ValueSpecItem->Name", zap.Any("name", names), zap.Any("value", values), zap.Any("type", typeMap["Name"]))
 			}
@@ -188,4 +188,59 @@ func ValueSpecItemHandler(sMap map[string]interface{}) {
 	} else {
 		logger.Fatal("unexpected ValueSpecItem", zap.Any("name", sMap["Name"]))
 	}
+}
+
+func StructTypeHandler(fieldsMap map[string]interface{}) {
+	FieldListHandler(fieldsMap)
+}
+
+func IdentTypeHandler(typeMap, param map[string]interface{}) (paramNameList []string, paramTypeList []string) {
+	nameList := param["Names"].([]interface{})
+
+	typeName := typeMap["Name"].(string)
+	for _, name := range nameList {
+		paramNameList = append(paramNameList, name.(map[string]interface{})["Name"].(string))
+		paramTypeList = append(paramTypeList, typeName)
+	}
+
+	logger.Debug("FuncDeclHandler->Ident", zap.Any("name", paramNameList), zap.String("type", typeName))
+	return paramNameList, paramTypeList
+}
+
+func EllipsisTypeHandler(typeMap, param map[string]interface{}) {
+	if typeMap["Elt"] != nil {
+		ellipsis := typeMap["Elt"].(map[string]interface{})
+		switch ellipsis["NodeType"].(string) {
+		case "Ident":
+			paramNameList, paramTypeList := IdentTypeHandler(ellipsis, param)
+			logger.Debug("EllipsisTypeHandler->Ident", zap.Any("names", paramNameList), zap.Any("types", paramTypeList))
+		case "SelectorExpr":
+			SelectorExprHandler(ellipsis)
+		case "StarExpr":
+			StarExprHandler(ellipsis, param)
+		case "ArrayType":
+			ArrayTypeHandler(ellipsis, param)
+		case "MapType":
+			MapTypeHandler(ellipsis, param)
+		case "FuncType":
+			if ellipsis["Params"] != nil {
+				params := ellipsis["Params"].(map[string]interface{})
+				FieldListHandler(params)
+			}
+			logger.Debug("EllipsisTypeHandler->FuncType")
+		case "InterfaceType":
+			logger.Debug("EllipsisTypeHandler->InterfaceType", zap.Any("name", param["Names"]))
+		case "Ellipsis":
+			logger.Debug("EllipsisTypeHandler->Ellipsis", zap.Any("name", param["Names"]))
+		case "ChanType":
+
+			logger.Debug("EllipsisTypeHandler->ChanType", zap.Any("name", param["Names"]))
+		case "StructType":
+			StructTypeHandler(ellipsis)
+			logger.Debug("EllipsisTypeHandler->StructType", zap.Any("name", param["Names"]))
+		default:
+			logger.Debug("EllipsisTypeHandler->Unknown", zap.Any("name", param["Names"]))
+		}
+	}
+
 }
